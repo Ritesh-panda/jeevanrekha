@@ -6,7 +6,7 @@ from app.core.config import settings
 
 def translate_text(text: str, target_language: str):
     """Translates text using the Google Translate API with an API Key."""
-    url = f"https://translation.googleapis.com/language/translate/v2?key={settings.GEMINI_API_KEY}"
+    url = f"https://translation.googleapis.com/language/translate/v2?key={settings.GOOGLE_MAPS_API_KEY}"
 
     # The data to be sent
     payload = {
@@ -27,7 +27,7 @@ def translate_text(text: str, target_language: str):
 
 def detect_language(text: str):
     """Detects the language using the Google Translate API with an API Key."""
-    url = f"https://translation.googleapis.com/language/translate/v2/detect?key={settings.GEMINI_API_KEY}"
+    url = f"https://translation.googleapis.com/language/translate/v2/detect?key={settings.GOOGLE_MAPS_API_KEY}"
 
     # The data to be sent
     payload = {

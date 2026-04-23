@@ -1,5 +1,6 @@
 # File: app/api/v1/chat_routes.py
 
+import logging
 from fastapi import APIRouter, Depends, Form, Response
 from sqlalchemy.orm import Session
 from twilio.twiml.messaging_response import MessagingResponse
@@ -8,10 +9,13 @@ from datetime import datetime
 
 from app.crud import crud_user, crud_hospitals
 from app.schemas.user import UserCreate
+from app.schemas.ai import ChatIntent
 from app.db.session import SessionLocal
 from app.services import (
     ai_service, maps_service, vaccine_service, alert_service, translation_service
 )
+
+logger = logging.getLogger(__name__)
 
 # --- THE COMPLETE MENU TEXT ---
 MENU_TEXT = """Hi! I am Ama Swasthya Sahayaka. I can help you with:
@@ -78,33 +82,55 @@ def handle_chat_message(
         elif message_body_en == "4":
             reply_en = alert_service.get_health_alerts()
     else:
-        ai_reply = ai_service.get_ai_response(user_id=user_id, user_message=message_body_en)
+        ai_response = ai_service.get_ai_response(user_id=user_id, user_message=message_body_en)
 
-        if ai_reply == "show_menu":
+        if ai_response.intent == ChatIntent.EMERGENCY:
+            logger.warning(f"EMERGENCY DETECTED: {ai_response.data.emergency_type} for User: {user_id}")
+            
+            # Formatted action-first emergency response
+            reply_en = "🚨 *MEDICAL EMERGENCY DETECTED* 🚨\n\n"
+            reply_en += "This system cannot dispatch an ambulance. Follow these steps IMMEDIATELY:\n\n"
+            reply_en += "1️⃣ *DIAL 108* (Ambulance/Emergency Services) immediately.\n"
+            reply_en += "2️⃣ Ensure your safety and stay calm.\n"
+            
+            if ai_response.data.emergency_type:
+               reply_en += f"\n*Detected Situation:* {ai_response.data.emergency_type}\n"
+               
+            reply_en += f"\n*Guidance:* {ai_response.reply}\n\n"
+            reply_en += "Reply 'find a hospital near me' to share your location for nearby centers."
+            
+        elif ai_response.intent == ChatIntent.SHOW_MENU:
             reply_en = MENU_TEXT
-        elif ai_reply.startswith("vaccine_schedule:"):
-            try:
-                date_str = ai_reply.split(":")[1].strip()
-                date_of_birth = datetime.strptime(date_str, "%Y-%m-%d").date()
-                reply_en = vaccine_service.calculate_vaccine_schedule(db, date_of_birth=date_of_birth)
-            except Exception as e:
-                reply_en = "I couldn't understand that date. Please try again."
-        
-        elif ai_reply.startswith("find_doctors:"):
-            hospital_name = ai_reply.split(":")[1].strip()
-            hospital = crud_hospital.get_hospital_by_name(db, hospital_name=hospital_name)
-            if hospital and hospital.doctors:
-                doctor_list = f"Here are the doctors for *{hospital.name}*:\n\n"
-                for doc in hospital.doctors:
-                    doctor_list += f"🩺 *Dr. {doc.name}* ({doc.specialty})\n"
-                reply_en = doctor_list
+            
+        elif ai_response.intent == ChatIntent.VACCINE_SCHEDULE:
+            if ai_response.data.date_of_birth:
+                try:
+                    date_of_birth = datetime.strptime(ai_response.data.date_of_birth, "%Y-%m-%d").date()
+                    reply_en = vaccine_service.calculate_vaccine_schedule(db, date_of_birth=date_of_birth)
+                except Exception as e:
+                    logger.error(f"Date format error: {e}")
+                    reply_en = "I couldn't understand that date. Please tell me again using YYYY-MM-DD or a clear format."
             else:
-                reply_en = f"I couldn't find any doctors for '{hospital_name}'."
+                reply_en = "Please provide the exact date of birth for the vaccine schedule."
         
-        elif ai_reply == "get_alerts":
+        elif ai_response.intent == ChatIntent.FIND_DOCTORS:
+            if ai_response.data.hospital_name:
+                hospital = crud_hospitals.get_hospital_by_name(db, hospital_name=ai_response.data.hospital_name)
+                if hospital and hospital.doctors:
+                    doctor_list = f"Here are the doctors for *{hospital.name}*:\n\n"
+                    for doc in hospital.doctors:
+                        doctor_list += f"🩺 *Dr. {doc.name}* ({doc.specialty})\n"
+                    reply_en = doctor_list
+                else:
+                    reply_en = f"I couldn't find any doctors for '{ai_response.data.hospital_name}'."
+            else:
+                reply_en = "Please specify the name of the hospital you are looking for."
+        
+        elif ai_response.intent == ChatIntent.GET_ALERTS:
             reply_en = alert_service.get_health_alerts()
-        else:
-            reply_en = ai_reply
+            
+        else: # GENERAL_CHAT
+            reply_en = ai_response.reply
     
     final_reply = reply_en
     if source_language not in ["en", "und"]:

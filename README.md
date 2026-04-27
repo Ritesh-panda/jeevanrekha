@@ -338,26 +338,36 @@ sequenceDiagram
 
 ## 🛠️ Installation & Setup
 
-### 1. Backend Protocol (FastAPI)
+### 🚀 Cloud Deployment (Recommended)
+JeevanRekha is designed for **Zero-Dependency Cloud Hosting**. No local server or `ngrok` is required for production.
+
+1.  **Backend (Render/GCP):** Use the provided `Dockerfile` and `render.yaml`. Connect your GitHub repo to Render.com.
+2.  **Frontend (Vercel):** Deploy the `voice_frontend` folder. Set `VITE_BACKEND_URL` to your Render service address.
+3.  **Environment Sync:** Copy the keys from `.env.example` into your cloud provider's dashboard.
+
+### 💻 Local Development Protocol
+
+**1. Backend (FastAPI)**
 ```bash
 cd app
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-### 2. Frontend Protocol (React)
+**2. Frontend (React)**
 ```bash
 cd voice_frontend
 npm install
 npm run dev
 ```
 
-### 3. Environment Specs
-Ensure you have the following keys in your `.env`:
-- `FIREBASE_CONFIG`: For the Live AI SDK.
-- `GOOGLE_API_KEY`: For Gemini and Maps.
-- `UPSTASH_REDIS_URL`: For persistent session memory.
-- `GROQ_API_KEY`: For high-availability fallback.
+### 🔑 Environment Configuration
+Ensure you have the following keys in your cloud dashboard or local `.env`:
+- `FIREBASE_CONFIG`: For the Multimodal Live SDK.
+- `GOOGLE_API_KEY`: For Gemini and Maps services.
+- `UPSTASH_REDIS_URL`: For session state management.
+- `GROQ_API_KEY`: For automated high-availability fallback.
+- `VITE_BACKEND_URL`: Points the UI to your production API.
 
 ---
 

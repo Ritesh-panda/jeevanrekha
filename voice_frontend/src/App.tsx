@@ -9,7 +9,6 @@ import { signInAnonymously } from "firebase/auth";
 import {
   DEFAULT_STATE_CODE,
   getStateProfile,
-  INDIA_STATE_PROFILES,
   LANGUAGE_BY_CODE,
   LANGUAGE_OPTIONS,
 } from "./data/indiaStateProfiles";
@@ -29,11 +28,20 @@ import type { CallState, LanguageCode } from "./types";
 import "./styles.css";
 
 const DEMO_EXAMPLES = [
-  { icon: "🤒", color: "#FF6B6B", bg: "rgba(255,107,107,0.15)", title: "Fever & Cold", sub: "I have fever and body pain" },
-  { icon: "❤️", color: "#FF4F61", bg: "rgba(255,79,97,0.15)",  title: "Chest Pain",   sub: "I have pain in my chest" },
-  { icon: "🤰", color: "#C084FC", bg: "rgba(192,132,252,0.15)",title: "Pregnancy Care",sub: "I need pregnancy care guidance" },
-  { icon: "👶", color: "#60A5FA", bg: "rgba(96,165,250,0.15)", title: "Child Health",  sub: "My child is not eating well" },
-  { icon: "🏥", color: "#34D399", bg: "rgba(52,211,153,0.15)", title: "Find Hospitals",sub: "Find nearby hospitals" },
+  { icon: "🤒", bg: "rgba(255,107,107,0.15)", title: "Fever & Cold",    sub: "I have fever and body pain" },
+  { icon: "❤️", bg: "rgba(255,79,97,0.15)",   title: "Chest Pain",      sub: "I have pain in my chest" },
+  { icon: "🤰", bg: "rgba(192,132,252,0.15)", title: "Pregnancy Care",  sub: "I need pregnancy care guidance" },
+  { icon: "👶", bg: "rgba(96,165,250,0.15)",  title: "Child Health",    sub: "My child is not eating well" },
+  { icon: "🏥", bg: "rgba(52,211,153,0.15)",  title: "Find Hospitals",  sub: "Find nearby hospitals" },
+];
+
+const HEALTH_GUIDE = [
+  { icon: "🤕", bg: "rgba(255,107,107,0.15)", title: "Fever & Cold",   tip: "Rest, drink fluids, take paracetamol if above 101°F. See a doctor if fever lasts 3+ days.", prompt: "I have fever and headache" },
+  { icon: "❤️", bg: "rgba(255,79,97,0.15)",   title: "Chest Pain",     tip: "Chest pain with sweating or left arm pain is a medical emergency. Call 108 immediately.",    prompt: "I have chest pain" },
+  { icon: "🤰", bg: "rgba(192,132,252,0.15)", title: "Pregnancy",      tip: "Regular antenatal check-ups are essential. Ask about iron supplements and vaccinations.",    prompt: "I need pregnancy care guidance" },
+  { icon: "👶", bg: "rgba(96,165,250,0.15)",  title: "Child Health",   tip: "Ensure vaccinations are up to date. ORS is the first treatment for diarrhea in children.", prompt: "My child is not eating well" },
+  { icon: "💉", bg: "rgba(52,211,153,0.15)",  title: "Vaccination",    tip: "India's National Immunization Schedule is free at all government health centers.",          prompt: "What vaccines does my baby need?" },
+  { icon: "🏥", bg: "rgba(245,158,11,0.15)",  title: "Find Hospitals", tip: "JeevanRekha can find the nearest hospital using your GPS location.",                        prompt: "Find nearby hospitals" },
 ];
 
 export default function App() {
@@ -50,12 +58,13 @@ export default function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [pendingLang, setPendingLang] = useState<LanguageCode>("hi-IN");
 
-  const sessionRef     = useRef<any>(null);
-  const controllerRef  = useRef<any>(null);
-  const timerRef       = useRef<number | null>(null);
+  const sessionRef    = useRef<any>(null);
+  const controllerRef = useRef<any>(null);
+  const timerRef      = useRef<number | null>(null);
 
   const selectedState    = getStateProfile(selectedStateCode);
   const selectedLanguage = LANGUAGE_BY_CODE[selectedLanguageCode];
+  const orbClass = aiStatus === "Listening..." ? "listening" : aiStatus === "Thinking..." ? "thinking" : "speaking";
 
   useEffect(() => { handleUseLocation(); }, []);
 
@@ -79,6 +88,9 @@ export default function App() {
     }
     setCallState("connecting");
     setAiStatus("Thinking...");
+    setShowExamples(false);
+    setShowHealthGuide(false);
+    setShowLangModal(false);
     const services = getFirebaseServices();
     if (!services) { setCallState("idle"); return; }
     try {
@@ -96,7 +108,6 @@ export default function App() {
       setAiStatus("Listening...");
       timerRef.current = window.setInterval(() => setCallTimer(p => p + 1), 1000);
       await session.send(promptText || buildOpeningTurn(selectedState, selectedLanguageCode), true);
-      setShowExamples(false);
     } catch (err) {
       console.error(err);
       setCallState("idle");
@@ -115,213 +126,20 @@ export default function App() {
   }
 
   const fmt = (s: number) => {
-    const m = Math.floor(s / 60).toString().padStart(2, "0");
+    const m   = Math.floor(s / 60).toString().padStart(2, "0");
     const sec = (s % 60).toString().padStart(2, "0");
     return `${m}:${sec}`;
   };
 
-  const orbClass = aiStatus === "Listening..." ? "listening" : aiStatus === "Thinking..." ? "thinking" : "speaking";
-
-  // ─── LANGUAGE MODAL ───────────────────────────────────────────
-  const LangModal = () => (
-    <motion.div
-      className="lang-modal"
-      initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-      transition={{ type: "spring", damping: 28, stiffness: 300 }}
-    >
-      <div className="lang-modal-header">
-        <button className="back-btn" onClick={() => setShowLangModal(false)}>←</button>
-        <h3>Select Language</h3>
-      </div>
-      <p className="lang-modal-sub">Choose your preferred language</p>
-      <div className="lang-list">
-        {LANGUAGE_OPTIONS.map(l => (
-          <div
-            key={l.code}
-            className={`lang-option ${pendingLang === l.code ? "selected" : ""}`}
-            onClick={() => setPendingLang(l.code as LanguageCode)}
-          >
-            <div className="lang-option-left">
-              <div>
-                <div className="lang-native">{l.nativeLabel}</div>
-                <div className="lang-eng">{l.label}</div>
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {l.availability === "prompt-guided" && (
-                <span className="preview-badge">Preview</span>
-              )}
-              <div className="lang-check">
-                {pendingLang === l.code ? "✓" : ""}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="lang-modal-footer">
-        <button
-          className="btn-save-lang"
-          onClick={() => {
-            setSelectedLanguageCode(pendingLang);
-            setShowLangModal(false);
-            if (callState === "live" && sessionRef.current) {
-              sessionRef.current.send(buildLanguageSwitchTurn(pendingLang), true);
-            }
-          }}
-        >
-          🎙️ Save Language
-        </button>
-      </div>
-    </motion.div>
-  );
-
-  // ─── EXAMPLES MODAL ───────────────────────────────────────────
-  const ExamplesModal = () => (
-    <motion.div
-      className="examples-modal"
-      initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-      transition={{ type: "spring", damping: 28, stiffness: 300 }}
-    >
-      <div className="examples-modal-header">
-        <button className="back-btn" onClick={() => setShowExamples(false)}>←</button>
-        <h3>Try an Example</h3>
-      </div>
-      <p className="examples-modal-sub">Tap on any example below to try a demo conversation</p>
-      <div className="ex-list">
-        {DEMO_EXAMPLES.map((ex, i) => (
-          <div key={i} className="ex-card" onClick={() => startCall(ex.sub)}>
-            <div className="ex-icon" style={{ background: ex.bg }}>{ex.icon}</div>
-            <div>
-              <div className="ex-card-title">{ex.title}</div>
-              <div className="ex-card-sub">{ex.sub}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </motion.div>
-  );
-
-  // ─── ACTIVE CALL SCREEN ───────────────────────────────────────
-  const CallScreen = () => (
-    <motion.div
-      className="call-screen"
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-    >
-      {/* Header */}
-      <div className="call-header">
-        <div className="live-badge">
-          <span className="live-dot" />
-          Live · {fmt(callTimer)}
-        </div>
-        <button className="call-close-btn" onClick={endCall}>✕</button>
-      </div>
-
-      {/* Status */}
-      <div className="call-status-block">
-        <h2>{aiStatus}</h2>
-        <p>How can I help you today?</p>
-      </div>
-
-      {/* Orb */}
-      <div className="call-orb-wrap">
-        <div className="orb-ring" />
-        <div className={`orb-body ${orbClass}`} />
-      </div>
-
-      {/* Waveform */}
-      <div className="waveform">
-        {Array.from({ length: 18 }).map((_, i) => (
-          <div
-            key={i}
-            className={`waveform-dot ${aiStatus === "Listening..." && i % 3 === 0 ? "active" : ""}`}
-            style={{ animationDelay: `${i * 0.07}s` }}
-          />
-        ))}
-      </div>
-
-      {/* Controls */}
-      <div className="call-controls">
-        <div className="ctrl-btn">
-          <div className="ctrl-btn-circle">🔊</div>
-          <span>Speaker</span>
-        </div>
-        <div className="ctrl-btn" onClick={endCall}>
-          <div className="ctrl-btn-circle end-call">📞</div>
-          <span style={{ color: "var(--danger)" }}>End Call</span>
-        </div>
-        <div className="ctrl-btn" onClick={() => setIsMuted(m => !m)}>
-          <div className="ctrl-btn-circle">{isMuted ? "🔇" : "🎙️"}</div>
-          <span>Mute</span>
-        </div>
-      </div>
-
-      {/* Tips */}
-      <div className="tips-card">
-        <h4>✨ Tips</h4>
-        <p>You can ask about symptoms, medications, doctors and more.</p>
-      </div>
-    </motion.div>
-  );
-
-  // ─── HOME SCREEN ──────────────────────────────────────────────
-  const HomeScreen = () => (
-    <>
-      {/* Greeting */}
-      <div className="greeting-block">
-        <h2>Namaste! I'm Jeevanrekha 👋</h2>
-        <p>I am here to help you with<br />your health concerns.</p>
-      </div>
-
-      {/* Orb */}
-      <div className="orb-wrap" onClick={() => startCall()}>
-        <div className="orb-ring" />
-        <div className="orb-body" />
-      </div>
-
-      {/* Start Call */}
-      <div className="start-call-wrap">
-        <p style={{ marginBottom: 10, fontSize: 12, color: "var(--t3)" }}>Tap to start a voice call</p>
-        <button className="btn-start" onClick={() => startCall()}>
-          🎙️ Start Call
-        </button>
-      </div>
-
-      {/* Info Cards */}
-      <div className="info-cards-row">
-        <div className="info-card" onClick={() => {
-          setShowExamples(false); // close examples first
-          setPendingLang(selectedLanguageCode);
-          setShowLangModal(true);
-        }}>
-          <div className="info-card-label">🌐 Language</div>
-          <div className="info-card-value">{selectedLanguage.nativeLabel}</div>
-          <div className="info-card-sub">Change →</div>
-        </div>
-        <div className="info-card">
-          <div className="info-card-label">📍 Location</div>
-          <div className="info-card-value">{selectedState.name}</div>
-          <div className="info-card-sub">Using GPS</div>
-        </div>
-      </div>
-
-      {/* Example Prompts */}
-      <div className="examples-section">
-        <h4>💡 You can say things like</h4>
-        {DEMO_PROMPTS.slice(0, 3).map((p, i) => (
-          <button key={i} className="example-chip" onClick={() => startCall(p)}>
-            {p}
-          </button>
-        ))}
-        <span className="view-all-link" onClick={() => setShowExamples(true)}>
-          View all examples →
-        </span>
-      </div>
-    </>
-  );
+  // ─── helpers to open modals exclusively ───────────────────────
+  const openExamples     = () => { setShowLangModal(false); setShowHealthGuide(false); setShowExamples(true); };
+  const openLang         = () => { setShowExamples(false);  setShowHealthGuide(false); setPendingLang(selectedLanguageCode); setShowLangModal(true); };
+  const openHealthGuide  = () => { setShowExamples(false);  setShowLangModal(false);   setShowHealthGuide(true); };
 
   return (
     <div className="app-shell">
-      {/* Desktop Sidebar (hidden on mobile via CSS) */}
+
+      {/* ── DESKTOP SIDEBAR ── */}
       <aside className="desktop-sidebar">
         <div className="sidebar-logo">
           <div className="logo-icon">❤️</div>
@@ -331,99 +149,199 @@ export default function App() {
           </div>
         </div>
         {[
-          { icon: "🏠", label: "Home" },
-          { icon: "📞", label: "Voice Call" },
-          { icon: "✨", label: "Examples" },
-          { icon: "🌐", label: "Language" },
-          { icon: "📖", label: "Health Guide" },
+          { icon: "🏠", label: "Home",         action: () => {} },
+          { icon: "📞", label: "Voice Call",   action: () => startCall() },
+          { icon: "✨", label: "Examples",     action: openExamples },
+          { icon: "🌐", label: "Language",     action: openLang },
+          { icon: "📖", label: "Health Guide", action: openHealthGuide },
         ].map(item => (
-          <div
-            key={item.label}
-            className="sidebar-nav-item"
-            onClick={() => {
-              if (item.label === "Voice Call") startCall();
-              if (item.label === "Examples") {
-                setShowLangModal(false);
-                setShowHealthGuide(false);
-                setShowExamples(true);
-              }
-              if (item.label === "Language") {
-                setShowExamples(false);
-                setShowHealthGuide(false);
-                setPendingLang(selectedLanguageCode);
-                setShowLangModal(true);
-              }
-              if (item.label === "Health Guide") {
-                setShowExamples(false);
-                setShowLangModal(false);
-                setShowHealthGuide(true);
-              }
-            }}
-          >
+          <div key={item.label} className="sidebar-nav-item" onClick={item.action}>
             <span>{item.icon}</span>
             <span>{item.label}</span>
           </div>
         ))}
       </aside>
 
-      {/* Mobile Header */}
+      {/* ── MOBILE HEADER ── */}
       <header className="mob-header">
         <div className="mob-logo-block">
           <div className="mob-logo-title">Jeevanrekha</div>
           <div className="mob-logo-sub">AI Voice Health Assistant</div>
         </div>
-        <div className="mob-menu-btn" onClick={() => {
-          setShowLangModal(false);
-          setShowHealthGuide(false);
-          setShowExamples(true);
-        }}>☰</div>
+        <div className="mob-menu-btn" onClick={openExamples}>☰</div>
       </header>
 
-      {/* Scrollable Main Content */}
+      {/* ── HOME SCREEN ── */}
       <div className="scroll-area">
-        <HomeScreen />
+        <div className="greeting-block">
+          <h2>Namaste! I'm Jeevanrekha 👋</h2>
+          <p>I am here to help you with<br />your health concerns.</p>
+        </div>
+
+        <div className="orb-wrap" onClick={() => startCall()}>
+          <div className="orb-ring" />
+          <div className="orb-body" />
+        </div>
+
+        <div className="start-call-wrap">
+          <p style={{ marginBottom: 10, fontSize: 12, color: "var(--t3)" }}>Tap to start a voice call</p>
+          <button className="btn-start" onClick={() => startCall()}>🎙️ Start Call</button>
+        </div>
+
+        <div className="info-cards-row">
+          <div className="info-card" onClick={openLang}>
+            <div className="info-card-label">🌐 Language</div>
+            <div className="info-card-value">{selectedLanguage.nativeLabel}</div>
+            <div className="info-card-sub">Change →</div>
+          </div>
+          <div className="info-card">
+            <div className="info-card-label">📍 Location</div>
+            <div className="info-card-value">{selectedState.name}</div>
+            <div className="info-card-sub">Using GPS</div>
+          </div>
+        </div>
+
+        <div className="examples-section">
+          <h4>💡 You can say things like</h4>
+          {DEMO_PROMPTS.slice(0, 3).map((p, i) => (
+            <button key={i} className="example-chip" onClick={() => startCall(p)}>{p}</button>
+          ))}
+          <span className="view-all-link" onClick={openExamples}>View all examples →</span>
+        </div>
       </div>
 
-      {/* Modals & Overlays */}
+      {/* ── ACTIVE CALL SCREEN ── */}
       <AnimatePresence>
-        {callState !== "idle" && <CallScreen key="call" />}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showLangModal && <LangModal key="lang" />}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showExamples && <ExamplesModal key="examples" />}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showHealthGuide && (
+        {callState !== "idle" && (
           <motion.div
-            key="healthguide"
+            key="call-screen"
+            className="call-screen"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          >
+            <div className="call-header">
+              <div className="live-badge">
+                <span className="live-dot" />
+                Live · {fmt(callTimer)}
+              </div>
+              <button className="call-close-btn" onClick={endCall}>✕</button>
+            </div>
+
+            <div className="call-status-block">
+              <h2>{aiStatus}</h2>
+              <p>How can I help you today?</p>
+            </div>
+
+            <div className="call-orb-wrap">
+              <div className="orb-ring" />
+              <div className={`orb-body ${orbClass}`} />
+            </div>
+
+            <div className="waveform">
+              {Array.from({ length: 18 }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`waveform-dot ${aiStatus === "Listening..." && i % 3 === 0 ? "active" : ""}`}
+                  style={{ animationDelay: `${i * 0.07}s` }}
+                />
+              ))}
+            </div>
+
+            <div className="call-controls">
+              <div className="ctrl-btn">
+                <div className="ctrl-btn-circle">🔊</div>
+                <span>Speaker</span>
+              </div>
+              <div className="ctrl-btn" onClick={endCall}>
+                <div className="ctrl-btn-circle end-call">📞</div>
+                <span style={{ color: "var(--danger)" }}>End Call</span>
+              </div>
+              <div className="ctrl-btn" onClick={() => setIsMuted(m => !m)}>
+                <div className="ctrl-btn-circle">{isMuted ? "🔇" : "🎙️"}</div>
+                <span>Mute</span>
+              </div>
+            </div>
+
+            <div className="tips-card">
+              <h4>✨ Tips</h4>
+              <p>You can ask about symptoms, medications, doctors and more.</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── LANGUAGE MODAL ── */}
+      <AnimatePresence>
+        {showLangModal && (
+          <motion.div
+            key="lang-modal"
+            className="lang-modal"
+            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 28, stiffness: 300 }}
+          >
+            <div className="lang-modal-header">
+              <button className="back-btn" onClick={() => setShowLangModal(false)}>←</button>
+              <h3>Select Language</h3>
+            </div>
+            <p className="lang-modal-sub">Choose your preferred language</p>
+            <div className="lang-list">
+              {LANGUAGE_OPTIONS.map(l => (
+                <div
+                  key={l.code}
+                  className={`lang-option ${pendingLang === l.code ? "selected" : ""}`}
+                  onClick={() => setPendingLang(l.code as LanguageCode)}
+                >
+                  <div className="lang-option-left">
+                    <div>
+                      <div className="lang-native">{l.nativeLabel}</div>
+                      <div className="lang-eng">{l.label}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {l.availability === "prompt-guided" && <span className="preview-badge">Preview</span>}
+                    <div className="lang-check">{pendingLang === l.code ? "✓" : ""}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="lang-modal-footer">
+              <button
+                className="btn-save-lang"
+                onClick={() => {
+                  setSelectedLanguageCode(pendingLang);
+                  setShowLangModal(false);
+                  if (callState === "live" && sessionRef.current) {
+                    sessionRef.current.send(buildLanguageSwitchTurn(pendingLang), true);
+                  }
+                }}
+              >
+                🎙️ Save Language
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── EXAMPLES MODAL ── */}
+      <AnimatePresence>
+        {showExamples && (
+          <motion.div
+            key="examples-modal"
             className="examples-modal"
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 300 }}
           >
             <div className="examples-modal-header">
-              <button className="back-btn" onClick={() => setShowHealthGuide(false)}>←</button>
-              <h3>Health Guide</h3>
+              <button className="back-btn" onClick={() => setShowExamples(false)}>←</button>
+              <h3>Try an Example</h3>
             </div>
-            <p className="examples-modal-sub">Quick health tips &amp; what you can ask JeevanRekha</p>
+            <p className="examples-modal-sub">Tap on any example to start a demo conversation</p>
             <div className="ex-list">
-              {[
-                { icon: "🤕", color: "#FF6B6B", bg: "rgba(255,107,107,0.15)", title: "Fever &amp; Cold", tip: "Rest, drink fluids, and take paracetamol if temperature is above 101°F. Visit a doctor if fever lasts more than 3 days.", prompt: "I have fever and headache" },
-                { icon: "❤️", color: "#FF4F61", bg: "rgba(255,79,97,0.15)", title: "Chest Pain", tip: "Chest pain with sweating or left arm pain is a medical emergency. Call 108 immediately.", prompt: "I have chest pain" },
-                { icon: "🤰", color: "#C084FC", bg: "rgba(192,132,252,0.15)", title: "Pregnancy Care", tip: "Regular antenatal check-ups are essential. Ask about iron supplements and vaccination schedules.", prompt: "I need pregnancy care guidance" },
-                { icon: "👶", color: "#60A5FA", bg: "rgba(96,165,250,0.15)", title: "Child Health", tip: "Ensure all vaccinations are up to date. ORS is the first treatment for diarrhea in children.", prompt: "My child is not eating well" },
-                { icon: "💉", color: "#34D399", bg: "rgba(52,211,153,0.15)", title: "Vaccination", tip: "India's National Immunization Schedule is free at all government health centers.", prompt: "What vaccines does my baby need?" },
-                { icon: "🏥", color: "#F59E0B", bg: "rgba(245,158,11,0.15)", title: "Find Hospitals", tip: "JeevanRekha can find the nearest hospital or clinic using your GPS location.", prompt: "Find nearby hospitals" },
-              ].map((item, i) => (
-                <div key={i} className="ex-card" onClick={() => { setShowHealthGuide(false); startCall(item.prompt); }}>
-                  <div className="ex-icon" style={{ background: item.bg }}>{item.icon}</div>
+              {DEMO_EXAMPLES.map((ex, i) => (
+                <div key={i} className="ex-card" onClick={() => { setShowExamples(false); startCall(ex.sub); }}>
+                  <div className="ex-icon" style={{ background: ex.bg }}>{ex.icon}</div>
                   <div>
-                    <div className="ex-card-title" dangerouslySetInnerHTML={{ __html: item.title }} />
-                    <div className="ex-card-sub" dangerouslySetInnerHTML={{ __html: item.tip }} />
+                    <div className="ex-card-title">{ex.title}</div>
+                    <div className="ex-card-sub">{ex.sub}</div>
                   </div>
                 </div>
               ))}
@@ -432,6 +350,36 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* ── HEALTH GUIDE MODAL ── */}
+      <AnimatePresence>
+        {showHealthGuide && (
+          <motion.div
+            key="health-guide"
+            className="examples-modal"
+            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 28, stiffness: 300 }}
+          >
+            <div className="examples-modal-header">
+              <button className="back-btn" onClick={() => setShowHealthGuide(false)}>←</button>
+              <h3>Health Guide</h3>
+            </div>
+            <p className="examples-modal-sub">Quick health tips — tap any to start a voice call</p>
+            <div className="ex-list">
+              {HEALTH_GUIDE.map((item, i) => (
+                <div key={i} className="ex-card" onClick={() => { setShowHealthGuide(false); startCall(item.prompt); }}>
+                  <div className="ex-icon" style={{ background: item.bg }}>{item.icon}</div>
+                  <div>
+                    <div className="ex-card-title">{item.title}</div>
+                    <div className="ex-card-sub">{item.tip}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── EMERGENCY OVERLAY ── */}
       <AnimatePresence>
         {isEmergency && (
           <motion.div
@@ -442,18 +390,15 @@ export default function App() {
             <div className="emergency-card">
               <div className="em-icon">⚠️</div>
               <div className="em-title">Emergency Detected</div>
-              <p className="em-sub">
-                Based on your symptoms, this may require immediate attention.
-              </p>
+              <p className="em-sub">Based on your symptoms, this may require immediate attention.</p>
               <button className="btn-em-call">📞 Call 108 Now</button>
               <button className="btn-em-hospital">🏥 Find Nearest Hospital</button>
-              <div className="em-note">
-                📍 Stay calm. Help is on the way.
-              </div>
+              <div className="em-note">📍 Stay calm. Help is on the way.</div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
     </div>
   );
 }

@@ -145,6 +145,84 @@ footer .footer-links a:hover { color: rgba(255,255,255,.9); }
 /* ── RESPONSIVE ── */
 @media (max-width: 860px) {
   .nav-links { display: none; }
+
+  /* Hide CTA pills on mobile — they overflow badly */
+  .nav-ctas { display: none; }
+
+  /* Make nav logo the full left side on mobile */
+  .nav-inner { padding: 0 1rem; gap: 1rem; }
+
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
-  .section { padding: 80px 1.5rem; }
+  .section { padding: 64px 1.25rem; }
+  .section-sm { padding: 48px 1.25rem; }
+}
+
+/* ── MOBILE-SPECIFIC OVERRIDES FOR index.html ── */
+@media (max-width: 680px) {
+  /* Problem grid: 2 col → 1 col */
+  .problem-grid { grid-template-columns: 1fr !important; }
+
+  /* Channel cards: side-by-side → stacked */
+  .ch-grid { grid-template-columns: 1fr !important; }
+
+  /* Stats bar: 4-across → 2x2 */
+  .stats-bar { grid-template-columns: repeat(2, 1fr) !important; }
+  .stat-item { border-right: none !important; border-bottom: 1px solid rgba(255,255,255,.08); }
+  .stat-item:nth-child(2n) { border-right: none !important; }
+  .stat-n { font-size: 2.2rem; }
+
+  /* Flow diagram: wrap and shrink nodes */
+  .flow-row { padding: 2rem 1rem !important; gap: 1rem !important; }
+  .fn-box { width: 72px !important; height: 72px !important; font-size: 1.4rem !important; }
+  .flow-arrow { font-size: 1rem; }
+
+  /* Hero buttons: stack vertically */
+  .hero-btns { flex-direction: column; align-items: center; gap: .75rem; }
+  .hero-btns .btn { width: 100%; max-width: 320px; justify-content: center; }
+
+  /* Tags: wrap nicely */
+  .hero-tags { gap: .4rem; }
+
+  /* Section channel cards text */
+  .ch-card { padding: 2rem 1.5rem !important; }
+  .ch-card h2 { font-size: 1.5rem !important; }
+}
+
+/* ── MOBILE BOTTOM CTA BAR ── */
+.mobile-cta-bar {
+  display: none; /* hidden on desktop */
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 1000;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-top: 1px solid rgba(0,0,0,0.1);
+  padding: 10px 16px;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+}
+.mobile-cta-btn {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  border-radius: 50px;
+  font-size: .85rem;
+  font-weight: 600;
+  transition: all .2s;
+}
+.mobile-cta-voice {
+  border: 1.5px solid var(--line);
+  color: var(--ink);
+  background: transparent;
+}
+.mobile-cta-wa {
+  background: var(--ink);
+  color: #fff;
+}
+
+@media (max-width: 860px) {
+  .mobile-cta-bar { display: flex; }
+  /* Add bottom padding to body so content isn't hidden behind the bar */
+  body { padding-bottom: 60px; }
 }

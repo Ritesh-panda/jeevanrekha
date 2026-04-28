@@ -9,7 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-import geoalchemy2
+
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
@@ -25,10 +25,10 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=True),
     sa.Column('city', sa.String(), nullable=True),
-    sa.Column('location', geoalchemy2.types.Geometry(geometry_type='POINT', srid=4326), nullable=True),
+    sa.Column('latitude', sa.Float(), nullable=True),
+    sa.Column('longitude', sa.Float(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('idx_hospitals_location', 'hospitals', ['location'], unique=False, postgresql_using='gist')
     op.create_index(op.f('ix_hospitals_id'), 'hospitals', ['id'], unique=False)
     op.create_index(op.f('ix_hospitals_name'), 'hospitals', ['name'], unique=False)
     op.create_table('users',
@@ -74,6 +74,6 @@ def downgrade() -> None:
     op.drop_table('users')
     op.drop_index(op.f('ix_hospitals_name'), table_name='hospitals')
     op.drop_index(op.f('ix_hospitals_id'), table_name='hospitals')
-    op.drop_index('idx_hospitals_location', table_name='hospitals', postgresql_using='gist')
+
     op.drop_table('hospitals')
     # ### end Alembic commands ###

@@ -23,7 +23,8 @@ def seed_data():
         {
             "name": "AIIMS Bhubaneswar",
             "city": "Bhubaneswar",
-            "location": "POINT(85.7977 20.2437)", # Longitude Latitude
+            "latitude": 20.2437,
+            "longitude": 85.7977,
             "doctors": [
                 {"name": "Dr. Gitanjali Batmanabane", "specialty": "General Medicine"},
                 {"name": "Dr. Ashok Mahapatra", "specialty": "Neurosurgery"}
@@ -32,7 +33,8 @@ def seed_data():
         {
             "name": "Capital Hospital",
             "city": "Bhubaneswar",
-            "location": "POINT(85.8236 20.2724)",
+            "latitude": 20.2724,
+            "longitude": 85.8236,
             "doctors": [
                 {"name": "Dr. Laxmidhar Sahoo", "specialty": "General Medicine"},
                 {"name": "Dr. P. K. Mohanty", "specialty": "Cardiology"}
@@ -41,7 +43,8 @@ def seed_data():
         {
             "name": "SCB Medical College and Hospital",
             "city": "Cuttack",
-            "location": "POINT(85.8858 20.4727)",
+            "latitude": 20.4727,
+            "longitude": 85.8858,
             "doctors": [
                 {"name": "Dr. Jayant Panda", "specialty": "General Medicine"},
                 {"name": "Dr. Sidhartha Das", "specialty": "Pediatrics"}
@@ -50,7 +53,8 @@ def seed_data():
         {
             "name": "AMRI Hospital",
             "city": "Bhubaneswar",
-            "location": "POINT(85.8282 20.3005)",
+            "latitude": 20.3005,
+            "longitude": 85.8282,
             "doctors": [
                 {"name": "Dr. Anjan Kumar Panda", "specialty": "Oncology"},
                 {"name": "Dr. J. K. Padhi", "specialty": "Neurology"}
@@ -63,7 +67,8 @@ def seed_data():
         hospital = Hospital(
             name=h_data["name"],
             city=h_data["city"],
-            location=h_data["location"]
+            latitude=h_data["latitude"],
+            longitude=h_data["longitude"]
         )
         db.add(hospital)
         db.commit() # Commit to get the hospital.id for the doctors

@@ -5,6 +5,20 @@
 
 ---
 
+## ⚡ 30-Second Overview
+
+JeevanRekha is an AI-powered healthcare assistant accessible via **WhatsApp (text)** and a **voice-first web app**.
+
+- Works in **8+ Indian languages**
+- Provides **real-time health guidance**
+- Detects **medical emergencies instantly**
+- Helps users find **nearby hospitals**
+- Runs on both **2G phones and modern browsers**
+
+One AI brain. Multiple access points. Built for India.
+
+---
+
 ## 🚀 Live Demo
 
 | Channel | Link | Status |
@@ -61,8 +75,19 @@
 - 💉 **Vaccine Scheduling** — Provides age-appropriate immunization guidance based on national health guidelines.
 - 🧠 **Contextual Session Memory** — Maintains a 20-turn conversation window per session, enabling multi-turn medical conversations without losing context.
 - 🔒 **Built-in Medical Guardrails** — Hard-coded safety policies prevent prescription of medications or clinical diagnosis, keeping responses advisory only.
-- 💬 **Empathetic AI Personality** — Conversational, human-like responses — not robotic checklists. The AI acknowledges pain, shows empathy, and flows naturally like a trusted doctor.
+- 💬 **Conversational AI Responses** — Designed to be clear, human-like, and easy to understand. Not robotic checklists.
 - 📱 **Mobile-First Voice UI** — Fully responsive voice app with dedicated mobile layout: bottom action bar, full-screen language selector, waveform visualizer, and Speaker/Mute/End call controls.
+
+---
+
+## 🚀 What Makes This Different
+
+- Not just a chatbot — a **multi-channel health system**
+- Works on **both low-end (2G) and high-end (voice AI) devices**
+- Uses a **central AI orchestrator** for consistent responses across all channels
+- Designed specifically for **India's healthcare access gap** — not a generic global tool
+- Built with **safety-first AI guardrails** — no diagnosis, no prescriptions, emergency-always-first
+
 
 ---
 
@@ -116,6 +141,8 @@ India's healthcare gap is not just about hospitals — it's about **information 
 | 🚨 **Safety** | Instant emergency detection triggers 108 escalation and nearest hospital lookup — no human agent needed |
 | 💉 **Prevention** | Automated child vaccination scheduling directly reduces missed immunizations in communities without health workers |
 | ⚡ **Speed** | Real-time triage and hospital finder, 24/7 — no waiting, no hold music, no English form to fill |
+
+> If deployed at scale, this system can act as a **first line of healthcare access** for millions who currently have none.
 
 ---
 
@@ -220,6 +247,23 @@ The system is built on one core rule — **channels are separate, intelligence i
 - The **Voice channel** uses a **hybrid model**: Gemini Live Audio handles real-time voice streaming in the browser; the FastAPI backend serves structured data (hospitals, vaccines, alerts) via a JSON API.
 - A single `process_query.py` orchestrator is the shared logic layer — same guardrails, same intent routing, channel-appropriate formatting output.
 - **Model-Agnostic Resilience** — Gemini 2.5 Flash (primary) with automated fallback to Groq Llama 3.3 ensures high availability.
+
+---
+
+## 🧠 How to Read This Section
+
+The following diagrams show different perspectives of the same system. You don't need to read all of them — each explains one specific part:
+
+| Diagram | What it shows |
+|---|---|
+| **Diagram 1** | System architecture — every component and how they connect |
+| **Diagram 2** | Data flow — how a message moves from user to AI to response |
+| **Diagram 3** | AI decision logic — how Gemini classifies and routes each intent |
+| **Diagram 4** | WhatsApp sequence — step-by-step execution of a real conversation |
+| **Diagram 5** | Emergency flow — exactly what happens when a crisis is detected |
+| **Diagram 6** | Scalability — why adding new channels requires zero backend changes |
+
+You can skim these — each diagram explains one part of the system independently.
 
 ---
 

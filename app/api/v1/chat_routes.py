@@ -38,15 +38,17 @@ async def chat_endpoint(
         try:
             lat = float(Latitude)
             lng = float(Longitude)
-            hospital_list = find_nearby_hospitals(lat, lng)
+            # Try 5km first, then widen to 10km
+            hospital_list = find_nearby_hospitals(lat, lng, radius=5000)
+            if "unavailable" in hospital_list.lower() or "no hospitals found" in hospital_list.lower():
+                hospital_list = find_nearby_hospitals(lat, lng, radius=10000)
             reply_text = (
-                f"📍 *Got your location!* Searching nearby...\n\n"
                 f"{hospital_list}\n\n"
-                f"🩺 *Tip:* You can also ask me about your symptoms and I'll help you decide which specialist to visit."
+                f"🩺 *Tip:* Tell me your symptoms and I'll help you decide which specialist to visit."
             )
         except Exception as e:
             logger.error(f"Location Handler Error: {e}")
-            reply_text = "I received your location but had trouble finding nearby hospitals. Please try again."
+            reply_text = "I received your location but had trouble searching for hospitals right now. Please try again in a moment, or call *108* for emergencies."
 
         twiml.message(reply_text)
         return Response(content=str(twiml), media_type="text/xml")

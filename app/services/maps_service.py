@@ -52,7 +52,7 @@ def _find_via_google(latitude: float, longitude: float, radius: int):
             logger.warning("Google Places returned no results. Trying OSM fallback.")
             return _find_via_osm(latitude, longitude, radius)
         
-        reply = "🏥 *Nearby Hospitals (Google Maps):*\n\n"
+        reply = "🏥 *Here are hospitals near you:*\n\n"
         
         for place in places:
             name = place.get("displayName", {}).get("text", "Unknown Hospital")
@@ -107,7 +107,7 @@ def _find_via_osm(latitude: float, longitude: float, radius: int):
         if not elements:
             return "⚠️ No hospitals found within 5km of your location. Try calling *108* for emergency assistance."
 
-        reply = "🏥 *Nearby Hospitals (OpenStreetMap):*\n\n"
+        reply = "🏥 *Nearby Hospitals:*\n\n"
         for element in elements[:4]:
             tags = element.get('tags', {})
             name = tags.get('name', 'Unnamed Hospital')
@@ -122,4 +122,4 @@ def _find_via_osm(latitude: float, longitude: float, radius: int):
 
     except Exception as e:
         logger.error(f"OSM Fallback Error: {e}")
-        return "⚠️ Hospital search is temporarily unavailable. Please call *108* for emergency help."
+        return "⚠️ Hospital search is temporarily unavailable. In an emergency, please call *108* immediately."

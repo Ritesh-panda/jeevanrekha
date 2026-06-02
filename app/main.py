@@ -4,7 +4,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.api.v1 import chat_routes, process_routes
+from app.api.v1 import chat_routes, process_routes, admin_routes
 
 # Ensure static directories exist (critical for Docker containers)
 os.makedirs("app/static/audio", exist_ok=True)
@@ -39,3 +39,6 @@ app.include_router(chat_routes.router, prefix="/api/v1", tags=["WhatsApp Channel
 
 # --- Voice Channel (React Frontend JSON API) ---
 app.include_router(process_routes.router, prefix="/api/v1", tags=["Voice Channel"])
+
+# --- System Admin & Security Controls ---
+app.include_router(admin_routes.router, prefix="/api/v1", tags=["System Admin & Security"])

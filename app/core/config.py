@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     NEWS_API_KEY: str | None = None
     GOOGLE_MAPS_API_KEY: str | None = None
     GROQ_API_KEY: str | None = None
+    
+    # ── Security & Access Controls ──
+    SYSTEM_ACCESS_KEY: str | None = None
+    SYSTEM_GATE_OPEN: bool = True
+    ADMIN_PASSWORD: str | None = "admin123"  # Fallback password to toggle gate
+
     class Config:
         case_sensitive = True
 

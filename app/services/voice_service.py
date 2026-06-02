@@ -8,13 +8,21 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Initialize Groq client
-client = Groq(api_key=settings.GROQ_API_KEY)
+# Initialize Groq client safely
+client = None
+try:
+    if settings.GROQ_API_KEY:
+        client = Groq(api_key=settings.GROQ_API_KEY)
+except Exception as e:
+    logger.warning(f"Failed to initialize Groq client in voice_service: {e}")
 
 async def transcribe_audio(audio_path: str) -> str:
     """
     Transcribe audio using Groq's Whisper-large-v3 (FREE Tier)
     """
+    if not client:
+        logger.error("Groq client is not initialized. Cannot transcribe audio.")
+        return "Transcribing failed (Groq client not configured)."
     try:
         with open(audio_path, "rb") as file:
             transcription = client.audio.transcriptions.create(

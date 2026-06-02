@@ -9,6 +9,7 @@ from app.services.ai_service import get_ai_response
 from app.services.voice_service import transcribe_audio, generate_speech
 from app.services.maps_service import find_nearby_hospitals
 from app.schemas.ai import ChatIntent
+from app.core.security import is_gate_open, verify_access_key
 import httpx
 
 router = APIRouter()
@@ -27,6 +28,19 @@ async def chat_endpoint(
     twiml = MessagingResponse()
     user_id = From
     user_message = Body or ""
+
+    # ── Security: Check if system gate is open ──
+    if not is_gate_open():
+        logger.warning(f"Blocked WhatsApp request from {user_id} - System Gate is Closed.")
+        twiml.message("👋 *Namaste! Arogya Mitra health assistant is temporarily paused by the administrator.* Please try again later.")
+        return Response(content=str(twiml), media_type="text/xml")
+
+    # ── Security: Validate query parameter access key ──
+    client_key = request.query_params.get("key")
+    if not verify_access_key(client_key):
+        logger.warning(f"Unauthorized WhatsApp request from {user_id} - Invalid or missing key.")
+        twiml.message("🚫 *Access Unauthorized.* Please ensure the correct key is configured in your Twilio webhook settings.")
+        return Response(content=str(twiml), media_type="text/xml")
 
     logger.info(f"--- 📥 INCOMING from {user_id}: '{user_message}' | Lat={Latitude} Lng={Longitude} ---")
 

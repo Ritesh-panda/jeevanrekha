@@ -27,6 +27,8 @@ import { inferNearestState, requestCurrentPosition } from "./lib/location";
 import type { CallState, LanguageCode } from "./types";
 import "./styles.css";
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+
 const DEMO_EXAMPLES = [
   { icon: "🤒", bg: "rgba(255,107,107,0.15)", title: "Fever & Cold",    sub: "I have fever and body pain" },
   { icon: "❤️", bg: "rgba(255,79,97,0.15)",   title: "Chest Pain",      sub: "I have pain in my chest" },
@@ -58,6 +60,15 @@ export default function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [pendingLang, setPendingLang] = useState<LanguageCode>("hi-IN");
 
+  // ── Security & Authorization States ──
+  const [accessKey, setAccessKey] = useState<string>(() => localStorage.getItem("jeevanrekha_access_key") || "");
+  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
+  const [gateOpen, setGateOpen] = useState<boolean>(true);
+  const [keyRequired, setKeyRequired] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string>("");
+  const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+
   const sessionRef    = useRef<any>(null);
   const controllerRef = useRef<any>(null);
   const timerRef      = useRef<number | null>(null);
@@ -66,7 +77,55 @@ export default function App() {
   const selectedLanguage = LANGUAGE_BY_CODE[selectedLanguageCode];
   const orbClass = aiStatus === "Listening..." ? "listening" : aiStatus === "Thinking..." ? "thinking" : "speaking";
 
-  useEffect(() => { handleUseLocation(); }, []);
+  async function checkAuthorization(keyToVerify: string) {
+    try {
+      setCheckingAuth(true);
+      const url = `${BACKEND_URL}/api/v1/admin/status${keyToVerify ? `?key=${encodeURIComponent(keyToVerify)}` : ""}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      const data = await res.json();
+      
+      setGateOpen(data.gate_open);
+      setKeyRequired(data.key_required);
+      
+      if (!data.gate_open) {
+        setIsAuthorized(false);
+      } else if (data.key_required) {
+        if (data.key_valid) {
+          setIsAuthorized(true);
+          setAuthError("");
+          if (keyToVerify) {
+            localStorage.setItem("jeevanrekha_access_key", keyToVerify);
+          }
+          setShowAuthModal(false);
+        } else {
+          setIsAuthorized(false);
+          setShowAuthModal(true);
+          if (keyToVerify) {
+            setAuthError("Invalid access key. Please try again.");
+          }
+        }
+      } else {
+        setIsAuthorized(true);
+        setAuthError("");
+        setShowAuthModal(false);
+      }
+    } catch (err) {
+      console.error("Failed to check authorization status:", err);
+      // Fallback: Fail closed to protect billing if server is unreachable/erroring
+      setGateOpen(false);
+      setIsAuthorized(false);
+    } finally {
+      setCheckingAuth(false);
+    }
+  }
+
+  useEffect(() => {
+    handleUseLocation();
+    checkAuthorization(accessKey);
+  }, []);
 
   async function handleUseLocation() {
     try {
@@ -82,6 +141,14 @@ export default function App() {
   }
 
   async function startCall(promptText?: string) {
+    if (!gateOpen) {
+      alert("System access is paused by the administrator.");
+      return;
+    }
+    if (keyRequired && !isAuthorized) {
+      setShowAuthModal(true);
+      return;
+    }
     if (!hasFirebaseConfig) {
       alert("Firebase configuration is missing. Please set VITE_FIREBASE_* env vars.");
       return;
@@ -178,14 +245,60 @@ export default function App() {
           <p>I am here to help you with<br />your health concerns.</p>
         </div>
 
+        {/* ── SECURITY STATUS INDICATOR ── */}
+        <div className="security-badge-container">
+          {checkingAuth ? (
+            <div className="security-badge locked">
+              <span className="security-dot" />
+              Checking Security Status...
+            </div>
+          ) : !gateOpen ? (
+            <div className="security-badge paused">
+              <span className="security-dot" />
+              Access Paused by Admin
+            </div>
+          ) : keyRequired ? (
+            isAuthorized ? (
+              <div className="security-badge online" onClick={() => setShowAuthModal(true)} style={{ cursor: 'pointer' }}>
+                <span className="security-dot" />
+                Access Authorized (Change Key)
+              </div>
+            ) : (
+              <div className="security-badge locked" onClick={() => setShowAuthModal(true)} style={{ cursor: 'pointer' }}>
+                <span className="security-dot" />
+                Locked (Passcode Required)
+              </div>
+            )
+          ) : (
+            <div className="security-badge online">
+              <span className="security-dot" />
+              Secure Mode
+            </div>
+          )}
+        </div>
+
         <div className="orb-wrap" onClick={() => startCall()}>
           <div className="orb-ring" />
           <div className="orb-body" />
         </div>
 
         <div className="start-call-wrap">
-          <p style={{ marginBottom: 10, fontSize: 12, color: "var(--t3)" }}>Tap to start a voice call</p>
-          <button className="btn-start" onClick={() => startCall()}>🎙️ Start Call</button>
+          {!gateOpen ? (
+            <div className="system-paused-panel">
+              <div className="system-paused-title">🚨 System Access Paused</div>
+              <div className="system-paused-desc">Arogya Mitra health assistant is temporarily disabled by the administrator. Please try again later.</div>
+            </div>
+          ) : keyRequired && !isAuthorized ? (
+            <>
+              <p style={{ marginBottom: 10, fontSize: 12, color: "var(--t3)" }}>Passcode verification required to start call</p>
+              <button className="btn-start" onClick={() => setShowAuthModal(true)}>🔒 Unlock Assistant</button>
+            </>
+          ) : (
+            <>
+              <p style={{ marginBottom: 10, fontSize: 12, color: "var(--t3)" }}>Tap to start a voice call</p>
+              <button className="btn-start" onClick={() => startCall()}>🎙️ Start Call</button>
+            </>
+          )}
         </div>
 
         <div className="info-cards-row">
@@ -394,6 +507,60 @@ export default function App() {
               <button className="btn-em-call">📞 Call 108 Now</button>
               <button className="btn-em-hospital">🏥 Find Nearest Hospital</button>
               <div className="em-note">📍 Stay calm. Help is on the way.</div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── SECURITY AUTHENTICATION MODAL ── */}
+      <AnimatePresence>
+        {(showAuthModal || (keyRequired && !isAuthorized && gateOpen)) && (
+          <motion.div
+            key="auth-modal"
+            className="auth-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="auth-card">
+              <div className="auth-lock-icon">🔒</div>
+              <h3>Access Key Required</h3>
+              <p>Please enter the authorization passcode to access JeevanRekha Voice Health Assistant.</p>
+              
+              <div className="auth-input-group">
+                <input
+                  type="password"
+                  placeholder="ENTER ACCESS KEY"
+                  className="auth-input"
+                  value={accessKey}
+                  onChange={(e) => setAccessKey(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      checkAuthorization(accessKey);
+                    }
+                  }}
+                  autoFocus
+                />
+                {authError && <div className="auth-error">{authError}</div>}
+              </div>
+
+              <button 
+                className="auth-btn-submit" 
+                onClick={() => checkAuthorization(accessKey)}
+                disabled={checkingAuth}
+              >
+                {checkingAuth ? "Verifying..." : "Authorize Access"}
+              </button>
+              
+              {isAuthorized && (
+                <button 
+                  className="btn-em-hospital" 
+                  style={{ marginTop: 12, marginBottom: 0 }}
+                  onClick={() => setShowAuthModal(false)}
+                >
+                  Cancel
+                </button>
+              )}
             </div>
           </motion.div>
         )}

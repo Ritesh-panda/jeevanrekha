@@ -62,7 +62,7 @@ export default function App() {
 
   // ── Security & Authorization States ──
   const [accessKey, setAccessKey] = useState<string>(() => localStorage.getItem("jeevanrekha_access_key") || "");
-  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
+  const [isAuthorized, setIsAuthorized] = useState<boolean>(true);
   const [gateOpen, setGateOpen] = useState<boolean>(true);
   const [keyRequired, setKeyRequired] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string>("");
@@ -114,9 +114,9 @@ export default function App() {
       }
     } catch (err) {
       console.error("Failed to check authorization status:", err);
-      // Fallback: Fail closed to protect billing if server is unreachable/erroring
-      setGateOpen(false);
-      setIsAuthorized(false);
+      // Fallback: Fail open if server is unreachable/offline to avoid blocking default dev/demo access
+      setGateOpen(true);
+      setIsAuthorized(true);
     } finally {
       setCheckingAuth(false);
     }
